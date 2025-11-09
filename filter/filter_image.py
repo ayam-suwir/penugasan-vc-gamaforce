@@ -1,8 +1,3 @@
-"""
-============================================================================
-PROGRAM PENERAPAN FILTER CANNY, SOBEL, DAN BILATERAL
-============================================================================
-"""
 
 import cv2
 import numpy as np
@@ -10,7 +5,6 @@ import matplotlib.pyplot as plt
 
 
 def load_image(image_path):
-    """Memuat gambar dari path yang diberikan"""
     image_bgr = cv2.imread(image_path)
     
     if image_bgr is None:
@@ -22,44 +16,40 @@ def load_image(image_path):
     return image_bgr, image_rgb, image_gray
 
 
-def apply_canny_filter(image_gray):
-    """Menerapkan Canny Edge Detection dengan parameter optimal"""
+def canny_filter(image_gray):
     blurred = cv2.GaussianBlur(image_gray, (5, 5), 1.5)
-    canny = cv2.Canny(blurred, 40, 120)
+    canny = cv2.Canny(blurred, 0, 100)
     return canny
 
 
-def apply_sobel_filter(image_gray):
-    """Menerapkan Sobel Filter dengan normalisasi optimal"""
+def sobel_filter(image_gray):
     blurred = cv2.GaussianBlur(image_gray, (3, 3), 0)
     
-    sobel_x = cv2.Sobel(blurred, cv2.CV_64F, 1, 0, ksize=5)
-    sobel_y = cv2.Sobel(blurred, cv2.CV_64F, 0, 1, ksize=5)
+    sobel_x = cv2.Sobel(blurred, cv2.CV_16S, 1, 0, ksize=3)
+    sobel_x = cv2.convertScaleAbs(sobel_x)
     
-    sobel_combined = np.sqrt(sobel_x**2 + sobel_y**2)
-    sobel_combined = np.uint8(np.clip(sobel_combined, 0, 255))
+    sobel_y = cv2.Sobel(blurred, cv2.CV_16S, 0, 1, ksize=3)
+    sobel_y = cv2.convertScaleAbs(sobel_y)
+    
+    sobel_combined = cv2.addWeighted(sobel_x, 0.5, sobel_y, 0.5, 0)
     
     return sobel_combined
 
 
-def apply_bilateral_filter(image_rgb):
-    """Menerapkan Bilateral Filter dengan parameter optimal"""
+
+def bilateral_filter(image_rgb):
     bilateral = cv2.bilateralFilter(image_rgb, 9, 75, 75)
     return bilateral
 
 
 def visualize_results(original, canny, sobel, bilateral):
-    """Menampilkan 4 hasil filter dalam 1 baris"""
     fig, axes = plt.subplots(1, 4, figsize=(20, 5))
-    fig.suptitle('HASIL PENERAPAN FILTER PADA GAMBAR', 
-                 fontsize=16, fontweight='bold')
-    
     axes[0].imshow(original)
     axes[0].set_title('Original Image', fontsize=12, fontweight='bold', pad=10)
     axes[0].axis('off')
     
     axes[1].imshow(canny, cmap='gray')
-    axes[1].set_title('Canny Edge Detection', fontsize=12, fontweight='bold', pad=10)
+    axes[1].set_title('Canny Filter (Edge Detection)', fontsize=12, fontweight='bold', pad=10)
     axes[1].axis('off')
     
     axes[2].imshow(sobel, cmap='gray')
@@ -74,37 +64,14 @@ def visualize_results(original, canny, sobel, bilateral):
     return fig
 
 
-def save_individual_results(canny, sobel, bilateral):
-    """Menyimpan hasil masing-masing filter"""
-    cv2.imwrite('hasil_canny.png', canny)
-    cv2.imwrite('hasil_sobel.png', sobel)
+def save_results(canny, sobel, bilateral):
+    cv2.imwrite('canny_result.png', canny)
+    cv2.imwrite('sobel_result.png', sobel)
     bilateral_bgr = cv2.cvtColor(bilateral, cv2.COLOR_RGB2BGR)
-    cv2.imwrite('hasil_bilateral.png', bilateral_bgr)
-
-
-def print_filter_info():
-    """Menampilkan informasi singkat tentang filter"""
-    print("\nINFORMASI FILTER:")
-    print("-" * 70)
-    print("1. CANNY EDGE DETECTION")
-    print("   Fungsi: Mendeteksi tepi/kontur objek pada gambar")
-    print("   Kegunaan: Segmentasi objek, deteksi bentuk, ekstraksi fitur")
-    print("   Parameter: Threshold 40-120, Gaussian Blur 5x5")
-    
-    print("\n2. SOBEL FILTER")
-    print("   Fungsi: Menghitung gradien intensitas gambar")
-    print("   Kegunaan: Deteksi tepi, analisis tekstur, edge detection")
-    print("   Parameter: Kernel 5x5, magnitude normalisasi")
-    
-    print("\n3. BILATERAL FILTER")
-    print("   Fungsi: Smoothing dengan preservasi tepi")
-    print("   Kegunaan: Noise reduction, image enhancement, denoising")
-    print("   Parameter: d=9, sigma_color=75, sigma_space=75")
-    print("-" * 70)
+    cv2.imwrite('bilateral_result.png', bilateral_bgr)
 
 
 def main():
-    """Fungsi utama"""
     print("=" * 70)
     print("PROGRAM FILTER CANNY, SOBEL, DAN BILATERAL")
     print("=" * 70)
@@ -116,34 +83,23 @@ def main():
         image_bgr, image_rgb, image_gray = load_image(image_path)
         print(f"Ukuran gambar: {image_rgb.shape[1]}x{image_rgb.shape[0]} pixels")
         
-        print_filter_info()
+        print("\n\nMenerapkan filter: ")
+        print("Canny Filter...")
+        canny = canny_filter(image_gray)
         
-        print("\n\nMenerapkan filter...")
-        print("- Canny Edge Detection...")
-        canny = apply_canny_filter(image_gray)
+        print("Sobel Filter...")
+        sobel = sobel_filter(image_gray)
         
-        print("- Sobel Filter...")
-        sobel = apply_sobel_filter(image_gray)
+        print("Bilateral Filter...")
+        bilateral = bilateral_filter(image_rgb)
         
-        print("- Bilateral Filter...")
-        bilateral = apply_bilateral_filter(image_rgb)
-        
-        print("\nMenyimpan hasil individual...")
-        save_individual_results(canny, sobel, bilateral)
-        print("  - hasil_canny.png")
-        print("  - hasil_sobel.png")
-        print("  - hasil_bilateral.png")
-        
-        print("\nMenampilkan visualisasi...")
+        save_results(canny, sobel, bilateral)
+
         fig = visualize_results(image_rgb, canny, sobel, bilateral)
-        plt.savefig('hasil_filter_lengkap.png', dpi=300, bbox_inches='tight')
-        print("  - hasil_filter_lengkap.png")
+        plt.savefig('filter_result.png', dpi=300, bbox_inches='tight')
         
         plt.show()
         
-        print("\n" + "=" * 70)
-        print("SELESAI!")
-        print("=" * 70)
         
     except FileNotFoundError as e:
         print(f"\nError: {e}")
